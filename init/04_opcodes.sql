@@ -387,6 +387,9 @@ DECLARE
     v_carry  INT;
     v_result INT;
     v_size   INT;
+    v_decimal BOOLEAN;
+    v_low    INT;
+    v_high   INT;
 BEGIN
     CASE p_mode
         WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
@@ -400,13 +403,35 @@ BEGIN
     END CASE;
 
     v_val   := pg6502.mem_read(v_addr);
-    SELECT a, CASE WHEN flag_c THEN 1 ELSE 0 END INTO v_a, v_carry FROM pg6502.cpu;
+    SELECT a, CASE WHEN flag_c THEN 1 ELSE 0 END, flag_d INTO v_a, v_carry, v_decimal FROM pg6502.cpu;
 
-    v_result := v_a + v_val + v_carry;
+    IF v_decimal THEN
+        v_low  := (v_a & 15) + (v_val & 15) + v_carry;
+        v_high := (v_a >> 4) + (v_val >> 4);
+
+        IF v_low > 9 THEN
+            v_low := v_low + 6;
+        END IF;
+
+        IF v_low > 15 THEN
+            v_high := v_high + 1;
+            v_low  := v_low - 16;
+        END IF;
+
+        IF v_high > 9 THEN
+            v_high := v_high + 6;
+        END IF;
+
+        v_result := (v_high << 4) | (v_low & 15);
+        v_carry  := CASE WHEN v_high > 15 THEN 1 ELSE 0 END;
+    ELSE
+        v_result := v_a + v_val + v_carry;
+        v_carry  := CASE WHEN v_result > 255 THEN 1 ELSE 0 END;
+    END IF;
 
     UPDATE pg6502.cpu SET
         a      = v_result & 255,
-        flag_c = (v_result > 255),
+        flag_c = (v_carry = 1),
         flag_v = ((v_a # v_result) & (v_val # v_result) & 128) != 0,
         flag_z = ((v_result & 255) = 0),
         flag_n = ((v_result & 128) != 0),
@@ -423,6 +448,9 @@ DECLARE
     v_carry  INT;
     v_result INT;
     v_size   INT;
+    v_decimal BOOLEAN;
+    v_low    INT;
+    v_high   INT;
 BEGIN
     CASE p_mode
         WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
@@ -435,15 +463,36 @@ BEGIN
         WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
     END CASE;
 
-    -- SBC is ADC with the operand's bits flipped
     v_val   := pg6502.mem_read(v_addr) # 255;
-    SELECT a, CASE WHEN flag_c THEN 1 ELSE 0 END INTO v_a, v_carry FROM pg6502.cpu;
+    SELECT a, CASE WHEN flag_c THEN 1 ELSE 0 END, flag_d INTO v_a, v_carry, v_decimal FROM pg6502.cpu;
 
-    v_result := v_a + v_val + v_carry;
+    IF v_decimal THEN
+        v_low  := (v_a & 15) - (v_val & 15) - (1 - v_carry);
+        v_high := (v_a >> 4) - (v_val >> 4);
+
+        IF v_low < 0 THEN
+            v_low := v_low - 6;
+        END IF;
+
+        IF v_low < 0 THEN
+            v_high := v_high - 1;
+            v_low  := v_low + 16;
+        END IF;
+
+        IF v_high < 0 THEN
+            v_high := v_high - 6;
+        END IF;
+
+        v_result := (v_high << 4) | (v_low & 15);
+        v_carry  := CASE WHEN v_high < 0 THEN 0 ELSE 1 END;
+    ELSE
+        v_result := v_a + v_val + v_carry;
+        v_carry  := CASE WHEN v_result > 255 THEN 1 ELSE 0 END;
+    END IF;
 
     UPDATE pg6502.cpu SET
         a      = v_result & 255,
-        flag_c = (v_result > 255),
+        flag_c = (v_carry = 1),
         flag_v = ((v_a # v_result) & (v_val # v_result) & 128) != 0,
         flag_z = ((v_result & 255) = 0),
         flag_n = ((v_result & 128) != 0),
