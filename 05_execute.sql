@@ -50,6 +50,8 @@ BEGIN
         WHEN 'ORA' THEN PERFORM pg6502.op_ora(v_mode);
         WHEN 'EOR' THEN PERFORM pg6502.op_eor(v_mode);
         WHEN 'CMP' THEN PERFORM pg6502.op_cmp(v_mode);
+        WHEN 'CPX' THEN PERFORM pg6502.op_cpx(v_mode);
+        WHEN 'CPY' THEN PERFORM pg6502.op_cpy(v_mode);
         WHEN 'NOP' THEN PERFORM pg6502.op_nop();
         WHEN 'JMP' THEN PERFORM pg6502.op_jmp(v_mode);
         WHEN 'BCC' THEN PERFORM pg6502.op_bcc();

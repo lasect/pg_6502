@@ -129,6 +129,16 @@ INSERT INTO pg6502.opcode_table VALUES
     (0xC1, 'CMP', 'indirect_x',  2),
     (0xD1, 'CMP', 'indirect_y',  2),
 
+-- Compare X
+    (0xE0, 'CPX', 'immediate',   2),
+    (0xE4, 'CPX', 'zero_page',   2),
+    (0xEC, 'CPX', 'absolute',    3),
+
+-- Compare Y
+    (0xC0, 'CPY', 'immediate',   2),
+    (0xC4, 'CPY', 'zero_page',   2),
+    (0xCC, 'CPY', 'absolute',    3),
+
 -- Misc
     (0xEA, 'NOP', 'implied',     1),
     (0x00, 'BRK', 'implied',     1),
@@ -566,6 +576,48 @@ BEGIN
     UPDATE pg6502.cpu SET
         flag_c = (v_a >= v_val),
         flag_z = (v_a = v_val),
+        flag_n = ((v_result & 128) != 0),
+        pc     = pc + v_size;
+END;
+$$ LANGUAGE plpgsql;
+
+-- CPX: Compare X with memory
+CREATE OR REPLACE FUNCTION pg6502.op_cpx(p_mode TEXT)
+RETURNS VOID AS $$
+DECLARE v_addr INT; v_val INT; v_x INT; v_result INT; v_size INT;
+BEGIN
+    CASE p_mode
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
+    END CASE;
+    v_val := pg6502.mem_read(v_addr);
+    SELECT x INTO v_x FROM pg6502.cpu;
+    v_result := v_x - v_val;
+    UPDATE pg6502.cpu SET
+        flag_c = (v_x >= v_val),
+        flag_z = (v_x = v_val),
+        flag_n = ((v_result & 128) != 0),
+        pc     = pc + v_size;
+END;
+$$ LANGUAGE plpgsql;
+
+-- CPY: Compare Y with memory
+CREATE OR REPLACE FUNCTION pg6502.op_cpy(p_mode TEXT)
+RETURNS VOID AS $$
+DECLARE v_addr INT; v_val INT; v_y INT; v_result INT; v_size INT;
+BEGIN
+    CASE p_mode
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
+    END CASE;
+    v_val := pg6502.mem_read(v_addr);
+    SELECT y INTO v_y FROM pg6502.cpu;
+    v_result := v_y - v_val;
+    UPDATE pg6502.cpu SET
+        flag_c = (v_y >= v_val),
+        flag_z = (v_y = v_val),
         flag_n = ((v_result & 128) != 0),
         pc     = pc + v_size;
 END;
