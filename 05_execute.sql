@@ -68,6 +68,11 @@ BEGIN
         WHEN 'PLP' THEN PERFORM pg6502.op_plp();
         WHEN 'TXS' THEN PERFORM pg6502.op_txs();
         WHEN 'TSX' THEN PERFORM pg6502.op_tsx();
+        WHEN 'BIT' THEN PERFORM pg6502.op_bit(v_mode);
+        WHEN 'ASL' THEN PERFORM pg6502.op_asl(v_mode);
+        WHEN 'LSR' THEN PERFORM pg6502.op_lsr(v_mode);
+        WHEN 'ROL' THEN PERFORM pg6502.op_rol(v_mode);
+        WHEN 'ROR' THEN PERFORM pg6502.op_ror(v_mode);
         ELSE RAISE EXCEPTION 'Unimplemented mnemonic: %', v_mnemonic;
     END CASE;
 
