@@ -3,7 +3,7 @@ RETURNS VOID AS $$
 DECLARE
     v_start_addr INT;
 BEGIN
-    v_start_addr := pg6502.mem_read16(16#FFFC);
+    v_start_addr := pg6502.mem_read16(65532);
 
     UPDATE pg6502.cpu SET
         a      = 0,

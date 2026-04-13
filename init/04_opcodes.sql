@@ -1121,7 +1121,7 @@ BEGIN
     v_flags := v_flags | 16; -- set B flag
     PERFORM pg6502.stack_push(v_flags);
     
-    v_vector := pg6502.mem_read16(16#FFFE);
+    v_vector := pg6502.mem_read16(65534);
     UPDATE pg6502.cpu SET pc = v_vector, flag_i = TRUE;
 END;
 $$ LANGUAGE plpgsql;

@@ -14,7 +14,7 @@ BEGIN
     END LOOP;
 
     -- Write reset vector (little-endian)
-    PERFORM pg6502.mem_write(16#FFFC, p_start & 255);
-    PERFORM pg6502.mem_write(16#FFFD, (p_start >> 8) & 255);
+    PERFORM pg6502.mem_write(65532, p_start & 255);
+    PERFORM pg6502.mem_write(65533, (p_start >> 8) & 255);
 END;
 $$ LANGUAGE plpgsql;
