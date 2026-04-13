@@ -21,11 +21,6 @@ BEGIN
             to_hex(v_opcode), to_hex(v_pc);
     END IF;
 
-    -- BRK: halt
-    IF v_mnemonic = 'BRK' THEN
-        RETURN 'BRK';
-    END IF;
-
     -- Execute: dispatch to the right opcode function
     CASE v_mnemonic
         WHEN 'LDA' THEN PERFORM pg6502.op_lda(v_mode);
@@ -83,6 +78,7 @@ BEGIN
         WHEN 'LSR' THEN PERFORM pg6502.op_lsr(v_mode);
         WHEN 'ROL' THEN PERFORM pg6502.op_rol(v_mode);
         WHEN 'ROR' THEN PERFORM pg6502.op_ror(v_mode);
+        WHEN 'BRK' THEN PERFORM pg6502.op_brk();
         ELSE RAISE EXCEPTION 'Unimplemented mnemonic: %', v_mnemonic;
     END CASE;
 

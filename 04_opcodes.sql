@@ -1051,3 +1051,26 @@ BEGIN
     UPDATE pg6502.cpu SET flag_d = FALSE, pc = pc + 1;
 END;
 $$ LANGUAGE plpgsql;
+
+-- BRK: Software Interrupt - push PC+2, status, and jump to interrupt vector
+CREATE OR REPLACE FUNCTION pg6502.op_brk()
+RETURNS VOID AS $$
+DECLARE v_pc INT; v_flags INT; v_lo INT; v_hi INT; v_vector INT;
+BEGIN
+    SELECT pc INTO v_pc FROM pg6502.cpu;
+    v_pc := v_pc + 2; -- BRK is 2 bytes, PC points past it
+    
+    v_lo := v_pc & 255;
+    v_hi := (v_pc >> 8) & 255;
+    
+    PERFORM pg6502.stack_push(v_hi);
+    PERFORM pg6502.stack_push(v_lo);
+    
+    v_flags := pg6502.flags_to_byte();
+    v_flags := v_flags | 16; -- set B flag
+    PERFORM pg6502.stack_push(v_flags);
+    
+    v_vector := pg6502.mem_read16(16#FFFE);
+    UPDATE pg6502.cpu SET pc = v_vector, flag_i = TRUE;
+END;
+$$ LANGUAGE plpgsql;
