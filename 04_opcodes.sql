@@ -200,7 +200,16 @@ INSERT INTO pg6502.opcode_table VALUES
     (0x08, 'PHP', 'implied',     1),
     (0x28, 'PLP', 'implied',     1),
     (0x9A, 'TXS', 'implied',     1),
-    (0xBA, 'TSX', 'implied',     1);
+    (0xBA, 'TSX', 'implied',     1),
+
+-- Flag instructions
+    (0x38, 'SEC', 'implied',     1),
+    (0x18, 'CLC', 'implied',     1),
+    (0x78, 'SEI', 'implied',     1),
+    (0x58, 'CLI', 'implied',     1),
+    (0xB8, 'CLV', 'implied',     1),
+    (0xF8, 'SED', 'implied',     1),
+    (0xD8, 'CLD', 'implied',     1);
 
 CREATE OR REPLACE FUNCTION pg6502.op_lda(p_mode TEXT)
 RETURNS VOID AS $$
@@ -984,5 +993,61 @@ BEGIN
     SELECT sp INTO v_sp FROM pg6502.cpu;
     UPDATE pg6502.cpu SET x = v_sp, pc = pc + 1;
     PERFORM pg6502.set_nz(v_sp);
+END;
+$$ LANGUAGE plpgsql;
+
+-- SEC: Set Carry Flag
+CREATE OR REPLACE FUNCTION pg6502.op_sec()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_c = TRUE, pc = pc + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- CLC: Clear Carry Flag
+CREATE OR REPLACE FUNCTION pg6502.op_clc()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_c = FALSE, pc = pc + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- SEI: Set Interrupt Disable
+CREATE OR REPLACE FUNCTION pg6502.op_sei()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_i = TRUE, pc = pc + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- CLI: Clear Interrupt Disable
+CREATE OR REPLACE FUNCTION pg6502.op_cli()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_i = FALSE, pc = pc + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- CLV: Clear Overflow Flag
+CREATE OR REPLACE FUNCTION pg6502.op_clv()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_v = FALSE, pc = pc + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- SED: Set Decimal Flag
+CREATE OR REPLACE FUNCTION pg6502.op_sed()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_d = TRUE, pc = pc + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- CLD: Clear Decimal Flag
+CREATE OR REPLACE FUNCTION pg6502.op_cld()
+RETURNS VOID AS $$
+BEGIN
+    UPDATE pg6502.cpu SET flag_d = FALSE, pc = pc + 1;
 END;
 $$ LANGUAGE plpgsql;

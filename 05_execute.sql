@@ -71,6 +71,13 @@ BEGIN
         WHEN 'PLP' THEN PERFORM pg6502.op_plp();
         WHEN 'TXS' THEN PERFORM pg6502.op_txs();
         WHEN 'TSX' THEN PERFORM pg6502.op_tsx();
+        WHEN 'SEC' THEN PERFORM pg6502.op_sec();
+        WHEN 'CLC' THEN PERFORM pg6502.op_clc();
+        WHEN 'SEI' THEN PERFORM pg6502.op_sei();
+        WHEN 'CLI' THEN PERFORM pg6502.op_cli();
+        WHEN 'CLV' THEN PERFORM pg6502.op_clv();
+        WHEN 'SED' THEN PERFORM pg6502.op_sed();
+        WHEN 'CLD' THEN PERFORM pg6502.op_cld();
         WHEN 'BIT' THEN PERFORM pg6502.op_bit(v_mode);
         WHEN 'ASL' THEN PERFORM pg6502.op_asl(v_mode);
         WHEN 'LSR' THEN PERFORM pg6502.op_lsr(v_mode);
