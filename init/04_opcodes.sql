@@ -211,7 +211,7 @@ INSERT INTO pg6502.opcode_table VALUES
     (0xF8, 'SED', 'implied',     1),
     (0xD8, 'CLD', 'implied',     1);
 
-CREATE OR REPLACE FUNCTION pg6502.op_lda(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_lda(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr INT;
@@ -219,28 +219,28 @@ DECLARE
     v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
 
     v_val := pg6502.mem_read(v_addr);
 
     UPDATE pg6502.cpu SET
         a  = v_val,
-        pc = pc + v_size;
+        pc = p_pc + v_size;
 
     PERFORM pg6502.set_nz(v_val);
 END
 $$ LANGUAGE plpgsql;
 
 -- LDXY: Load X/Y register
-CREATE OR REPLACE FUNCTION pg6502.op_ldxy(p_mode TEXT, p_toggle INT)
+CREATE OR REPLACE FUNCTION pg6502.op_ldxy(p_mode TEXT, p_toggle INT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr INT;
@@ -248,11 +248,11 @@ DECLARE
     v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_y' THEN v_addr := pg6502.addr_zero_page_y(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_y' THEN v_addr := pg6502.addr_zero_page_y(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
     END CASE;
 
     v_val := pg6502.mem_read(v_addr);
@@ -260,11 +260,11 @@ BEGIN
     IF p_toggle = 0 THEN
         UPDATE pg6502.cpu
         SET x = v_val,
-            pc = pc + v_size;
+            pc = p_pc + v_size;
     ELSE
         UPDATE pg6502.cpu
         SET y = v_val,
-            pc = pc + v_size;
+            pc = p_pc + v_size;
     END IF;
 
     PERFORM pg6502.set_nz(v_val);
@@ -272,7 +272,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- STA: Store Accumulator into memory
-CREATE OR REPLACE FUNCTION pg6502.op_sta(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_sta(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr INT;
@@ -280,23 +280,23 @@ DECLARE
     v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();      v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();      v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);      v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);      v_size := 2;
     END CASE;
 
     SELECT a INTO v_a FROM pg6502.cpu;
     PERFORM pg6502.mem_write(v_addr, v_a);
 
-    UPDATE pg6502.cpu SET pc = pc + v_size;
+    UPDATE pg6502.cpu SET pc = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_stxy(p_mode TEXT, p_toggle INT)
+CREATE OR REPLACE FUNCTION pg6502.op_stxy(p_mode TEXT, p_toggle INT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr INT;
@@ -304,10 +304,10 @@ DECLARE
     v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_y' THEN v_addr := pg6502.addr_zero_page_y(); v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute();  v_size := 3;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_y' THEN v_addr := pg6502.addr_zero_page_y(p_pc); v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute(p_pc);  v_size := 3;
         ELSE
             RAISE EXCEPTION 'invalid addressing mode: %', p_mode;
     END CASE;
@@ -321,7 +321,7 @@ BEGIN
     PERFORM pg6502.mem_write(v_addr, v_val);
 
     UPDATE pg6502.cpu
-    SET pc = pc + v_size;
+    SET pc = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -378,7 +378,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_adc(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_adc(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr   INT;
@@ -392,14 +392,14 @@ DECLARE
     v_high   INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
 
     v_val   := pg6502.mem_read(v_addr);
@@ -435,11 +435,11 @@ BEGIN
         flag_v = ((v_a # v_result) & (v_val # v_result) & 128) != 0,
         flag_z = ((v_result & 255) = 0),
         flag_n = ((v_result & 128) != 0),
-        pc     = pc + v_size;
+        pc     = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_sbc(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_sbc(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr   INT;
@@ -453,14 +453,14 @@ DECLARE
     v_high   INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
 
     v_val   := pg6502.mem_read(v_addr) # 255;
@@ -496,42 +496,42 @@ BEGIN
         flag_v = ((v_a # v_result) & (v_val # v_result) & 128) != 0,
         flag_z = ((v_result & 255) = 0),
         flag_n = ((v_result & 128) != 0),
-        pc     = pc + v_size;
+        pc     = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
 -- INC: Increment a memory location
-CREATE OR REPLACE FUNCTION pg6502.op_inc(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_inc(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();     v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);     v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
     END CASE;
     v_val := (pg6502.mem_read(v_addr) + 1) & 255;
     PERFORM pg6502.mem_write(v_addr, v_val);
-    UPDATE pg6502.cpu SET pc = pc + v_size;
+    UPDATE pg6502.cpu SET pc = p_pc + v_size;
     PERFORM pg6502.set_nz(v_val);
 END;
 $$ LANGUAGE plpgsql;
 
 -- DEC: Decrement a memory location
-CREATE OR REPLACE FUNCTION pg6502.op_dec(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_dec(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();     v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);     v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
     END CASE;
     v_val := (pg6502.mem_read(v_addr) + 255) & 255;  -- +255 wraps correctly (avoids negative)
     PERFORM pg6502.mem_write(v_addr, v_val);
-    UPDATE pg6502.cpu SET pc = pc + v_size;
+    UPDATE pg6502.cpu SET pc = p_pc + v_size;
     PERFORM pg6502.set_nz(v_val);
 END;
 $$ LANGUAGE plpgsql;
@@ -574,7 +574,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- AND: Bitwise AND with accumulator
-CREATE OR REPLACE FUNCTION pg6502.op_and(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_and(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE
     v_addr INT;
@@ -583,14 +583,14 @@ DECLARE
     v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
 
     v_val := pg6502.mem_read(v_addr);
@@ -600,29 +600,29 @@ BEGIN
 
     UPDATE pg6502.cpu
     SET a      = v_res,
-        pc     = pc + v_size,
+        pc     = p_pc + v_size,
         flag_z = (v_res = 0),
         flag_n = ((v_res & 128) <> 0);
 END;
 $$ LANGUAGE plpgsql;
 
 -- ORA: Bitwise OR with accumulator
-CREATE OR REPLACE FUNCTION pg6502.op_ora(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_ora(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
     v_val := pg6502.mem_read(v_addr);
-    UPDATE pg6502.cpu SET a = a | v_val, pc = pc + v_size;
+    UPDATE pg6502.cpu SET a = a | v_val, pc = p_pc + v_size;
     UPDATE pg6502.cpu SET
         flag_z = (a = 0),
         flag_n = ((a & 128) != 0);
@@ -630,22 +630,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- EOR: Bitwise XOR with accumulator
-CREATE OR REPLACE FUNCTION pg6502.op_eor(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_eor(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
     v_val := pg6502.mem_read(v_addr);
-    UPDATE pg6502.cpu SET a = a # v_val, pc = pc + v_size;
+    UPDATE pg6502.cpu SET a = a # v_val, pc = p_pc + v_size;
     UPDATE pg6502.cpu SET
         flag_z = (a = 0),
         flag_n = ((a & 128) != 0);
@@ -653,19 +653,19 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- CMP: Compare A with memory (sets flags, does not change A)
-CREATE OR REPLACE FUNCTION pg6502.op_cmp(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_cmp(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_a INT; v_result INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
-        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y();  v_size := 3;
-        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x();       v_size := 2;
-        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y();       v_size := 2;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
+        WHEN 'absolute_y'  THEN v_addr := pg6502.addr_absolute_y(p_pc);  v_size := 3;
+        WHEN 'indirect_x'  THEN v_addr := pg6502.addr_indirect_x(p_pc);       v_size := 2;
+        WHEN 'indirect_y'  THEN v_addr := pg6502.addr_indirect_y(p_pc);       v_size := 2;
     END CASE;
     v_val := pg6502.mem_read(v_addr);
     SELECT a INTO v_a FROM pg6502.cpu;
@@ -674,19 +674,19 @@ BEGIN
         flag_c = (v_a >= v_val),
         flag_z = (v_a = v_val),
         flag_n = ((v_result & 128) != 0),
-        pc     = pc + v_size;
+        pc     = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
 -- CPX: Compare X with memory
-CREATE OR REPLACE FUNCTION pg6502.op_cpx(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_cpx(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_x INT; v_result INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
     END CASE;
     v_val := pg6502.mem_read(v_addr);
     SELECT x INTO v_x FROM pg6502.cpu;
@@ -695,19 +695,19 @@ BEGIN
         flag_c = (v_x >= v_val),
         flag_z = (v_x = v_val),
         flag_n = ((v_result & 128) != 0),
-        pc     = pc + v_size;
+        pc     = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
 -- CPY: Compare Y with memory
-CREATE OR REPLACE FUNCTION pg6502.op_cpy(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_cpy(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_y INT; v_result INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate();   v_size := 2;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
+        WHEN 'immediate'   THEN v_addr := pg6502.addr_immediate(p_pc);   v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
     END CASE;
     v_val := pg6502.mem_read(v_addr);
     SELECT y INTO v_y FROM pg6502.cpu;
@@ -716,18 +716,18 @@ BEGIN
         flag_c = (v_y >= v_val),
         flag_z = (v_y = v_val),
         flag_n = ((v_result & 128) != 0),
-        pc     = pc + v_size;
+        pc     = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
 -- BIT: Bit test - loads value, tests bits against flags, doesn't change A (on real 6502 A is affected but flags are set from memory)
-CREATE OR REPLACE FUNCTION pg6502.op_bit(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_bit(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_a INT; v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'zero_page' THEN v_addr := pg6502.addr_zero_page(); v_size := 2;
-        WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute();  v_size := 3;
+        WHEN 'zero_page' THEN v_addr := pg6502.addr_zero_page(p_pc); v_size := 2;
+        WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute(p_pc);  v_size := 3;
     END CASE;
     v_val := pg6502.mem_read(v_addr);
     SELECT a INTO v_a FROM pg6502.cpu;
@@ -735,12 +735,12 @@ BEGIN
         flag_z = ((v_a & v_val) = 0),
         flag_v = ((v_val & 64) != 0),
         flag_n = ((v_val & 128) != 0),
-        pc     = pc + v_size;
+        pc     = p_pc + v_size;
 END;
 $$ LANGUAGE plpgsql;
 
 -- ASL: Arithmetic Shift Left
-CREATE OR REPLACE FUNCTION pg6502.op_asl(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_asl(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_result INT; v_size INT;
 BEGIN
@@ -748,18 +748,18 @@ BEGIN
         WHEN 'accumulator' THEN
             SELECT a INTO v_val FROM pg6502.cpu;
             v_result := (v_val * 2) & 255;
-            UPDATE pg6502.cpu SET a = v_result, pc = pc + 1;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
+            UPDATE pg6502.cpu SET a = v_result, pc = p_pc + 1;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
     END CASE;
     
     IF p_mode != 'accumulator' THEN
         v_val := pg6502.mem_read(v_addr);
         v_result := (v_val * 2) & 255;
         PERFORM pg6502.mem_write(v_addr, v_result);
-        UPDATE pg6502.cpu SET pc = pc + v_size;
+        UPDATE pg6502.cpu SET pc = p_pc + v_size;
     END IF;
     
     UPDATE pg6502.cpu SET
@@ -770,7 +770,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- LSR: Logical Shift Right
-CREATE OR REPLACE FUNCTION pg6502.op_lsr(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_lsr(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_result INT; v_size INT;
 BEGIN
@@ -778,18 +778,18 @@ BEGIN
         WHEN 'accumulator' THEN
             SELECT a INTO v_val FROM pg6502.cpu;
             v_result := v_val >> 1;
-            UPDATE pg6502.cpu SET a = v_result, pc = pc + 1;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
+            UPDATE pg6502.cpu SET a = v_result, pc = p_pc + 1;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
     END CASE;
     
     IF p_mode != 'accumulator' THEN
         v_val := pg6502.mem_read(v_addr);
         v_result := v_val >> 1;
         PERFORM pg6502.mem_write(v_addr, v_result);
-        UPDATE pg6502.cpu SET pc = pc + v_size;
+        UPDATE pg6502.cpu SET pc = p_pc + v_size;
     END IF;
     
     UPDATE pg6502.cpu SET
@@ -800,7 +800,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ROL: Rotate Left
-CREATE OR REPLACE FUNCTION pg6502.op_rol(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_rol(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_result INT; v_carry INT; v_size INT;
 BEGIN
@@ -810,18 +810,18 @@ BEGIN
         WHEN 'accumulator' THEN
             SELECT a INTO v_val FROM pg6502.cpu;
             v_result := ((v_val * 2) | v_carry) & 255;
-            UPDATE pg6502.cpu SET a = v_result, pc = pc + 1;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
+            UPDATE pg6502.cpu SET a = v_result, pc = p_pc + 1;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
     END CASE;
     
     IF p_mode != 'accumulator' THEN
         v_val := pg6502.mem_read(v_addr);
         v_result := ((v_val * 2) | v_carry) & 255;
         PERFORM pg6502.mem_write(v_addr, v_result);
-        UPDATE pg6502.cpu SET pc = pc + v_size;
+        UPDATE pg6502.cpu SET pc = p_pc + v_size;
     END IF;
     
     UPDATE pg6502.cpu SET
@@ -832,7 +832,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ROR: Rotate Right
-CREATE OR REPLACE FUNCTION pg6502.op_ror(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_ror(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT; v_val INT; v_result INT; v_carry INT; v_size INT;
 BEGIN
@@ -842,18 +842,18 @@ BEGIN
         WHEN 'accumulator' THEN
             SELECT a INTO v_val FROM pg6502.cpu;
             v_result := (v_val >> 1) | (v_carry * 128);
-            UPDATE pg6502.cpu SET a = v_result, pc = pc + 1;
-        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
-        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
-        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute();    v_size := 3;
-        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x();  v_size := 3;
+            UPDATE pg6502.cpu SET a = v_result, pc = p_pc + 1;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page(p_pc);   v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(p_pc); v_size := 2;
+        WHEN 'absolute'    THEN v_addr := pg6502.addr_absolute(p_pc);    v_size := 3;
+        WHEN 'absolute_x'  THEN v_addr := pg6502.addr_absolute_x(p_pc);  v_size := 3;
     END CASE;
     
     IF p_mode != 'accumulator' THEN
         v_val := pg6502.mem_read(v_addr);
         v_result := (v_val >> 1) | (v_carry * 128);
         PERFORM pg6502.mem_write(v_addr, v_result);
-        UPDATE pg6502.cpu SET pc = pc + v_size;
+        UPDATE pg6502.cpu SET pc = p_pc + v_size;
     END IF;
     
     UPDATE pg6502.cpu SET
@@ -872,30 +872,29 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- JMP: Jump to address
-CREATE OR REPLACE FUNCTION pg6502.op_jmp(p_mode TEXT)
+CREATE OR REPLACE FUNCTION pg6502.op_jmp(p_mode TEXT, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_addr INT;
 BEGIN
     CASE p_mode
-        WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute();
-        WHEN 'indirect'  THEN v_addr := pg6502.addr_indirect();
+        WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute(p_pc);
+        WHEN 'indirect'  THEN v_addr := pg6502.addr_indirect(p_pc);
     END CASE;
     UPDATE pg6502.cpu SET pc = v_addr;
 END;
 $$ LANGUAGE plpgsql;
 
 -- JSR: Jump to Subroutine - push return address (PC-1) onto stack
-CREATE OR REPLACE FUNCTION pg6502.op_jsr()
+CREATE OR REPLACE FUNCTION pg6502.op_jsr(p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_pc INT; v_lo INT; v_hi INT;
 BEGIN
-    SELECT pc INTO v_pc FROM pg6502.cpu;
-    v_pc := v_pc + 2; -- PC points past the instruction
+    v_pc := p_pc + 2; -- PC points past the instruction
     v_lo := v_pc & 255;
     v_hi := (v_pc >> 8) & 255;
     PERFORM pg6502.stack_push(v_hi);
     PERFORM pg6502.stack_push(v_lo);
-    UPDATE pg6502.cpu SET pc = pg6502.addr_absolute();
+    UPDATE pg6502.cpu SET pc = pg6502.addr_absolute(p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -926,64 +925,64 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Branch instructions
-CREATE OR REPLACE FUNCTION pg6502.op_branch(p_condition BOOLEAN)
+CREATE OR REPLACE FUNCTION pg6502.op_branch(p_condition BOOLEAN, p_pc INT)
 RETURNS VOID AS $$
 DECLARE v_target INT;
 BEGIN
     IF p_condition THEN
-        v_target := pg6502.addr_relative();
+        v_target := pg6502.addr_relative(p_pc);
         UPDATE pg6502.cpu SET pc = v_target;
     ELSE
-        UPDATE pg6502.cpu SET pc = pc + 2;
+        UPDATE pg6502.cpu SET pc = p_pc + 2;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bcc() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bcc(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_c FROM pg6502.cpu) = FALSE);
+    PERFORM pg6502.op_branch((SELECT flag_c FROM pg6502.cpu) = FALSE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bcs() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bcs(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_c FROM pg6502.cpu) = TRUE);
+    PERFORM pg6502.op_branch((SELECT flag_c FROM pg6502.cpu) = TRUE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_beq() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_beq(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_z FROM pg6502.cpu) = TRUE);
+    PERFORM pg6502.op_branch((SELECT flag_z FROM pg6502.cpu) = TRUE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bne() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bne(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_z FROM pg6502.cpu) = FALSE);
+    PERFORM pg6502.op_branch((SELECT flag_z FROM pg6502.cpu) = FALSE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bvc() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bvc(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_v FROM pg6502.cpu) = FALSE);
+    PERFORM pg6502.op_branch((SELECT flag_v FROM pg6502.cpu) = FALSE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bvs() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bvs(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_v FROM pg6502.cpu) = TRUE);
+    PERFORM pg6502.op_branch((SELECT flag_v FROM pg6502.cpu) = TRUE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bpl() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bpl(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_n FROM pg6502.cpu) = FALSE);
+    PERFORM pg6502.op_branch((SELECT flag_n FROM pg6502.cpu) = FALSE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.op_bmi() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION pg6502.op_bmi(p_pc INT) RETURNS VOID AS $$
 BEGIN
-    PERFORM pg6502.op_branch((SELECT flag_n FROM pg6502.cpu) = TRUE);
+    PERFORM pg6502.op_branch((SELECT flag_n FROM pg6502.cpu) = TRUE, p_pc);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1121,7 +1120,7 @@ BEGIN
     v_flags := v_flags | 16; -- set B flag
     PERFORM pg6502.stack_push(v_flags);
     
-    v_vector := pg6502.mem_read16(65534);
+    v_vector := pg6502.mem_read16(65532);
     UPDATE pg6502.cpu SET pc = v_vector, flag_i = TRUE;
 END;
 $$ LANGUAGE plpgsql;
