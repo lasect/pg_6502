@@ -41,8 +41,7 @@ CREATE OR REPLACE FUNCTION pg6502.set_nz(p_val INT)
 RETURNS VOID AS $$
 BEGIN
     UPDATE pg6502.cpu SET
-        flag_n = (p_val = 0),
-        -- if the 7th bit is set -> negative in 2's complement
-        flag_z = (p_val & 128) != 0;
+        flag_z = (p_val = 0),
+        flag_n = (p_val & 128) != 0;
     END
 $$ LANGUAGE plpgsql;
