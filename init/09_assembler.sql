@@ -86,25 +86,42 @@ BEGIN
             v_mode := 'immediate';
             v_temp := SUBSTRING(v_operand FROM 3);
             v_byte := ('x' || v_temp)::bit(8)::int;
-        -- Zero page: $addr
-        ELSIF SUBSTRING(v_operand FROM 1 FOR 1) = '$' AND v_operand NOT LIKE '%,%' THEN
-            v_mode := 'zero_page';
-            v_temp := SUBSTRING(v_operand FROM 2);
-            v_addr := ('x' || v_temp)::bit(16)::int;
-            v_byte := v_addr & 255;
-        -- Zero page X: $addr,X
-        ELSIF v_operand LIKE '$,%' THEN
-            v_mode := 'zero_page_x';
+        -- Indexed X: $addr,X
+        ELSIF v_operand ~ '^\$[0-9A-Fa-f]+,[Xx]$' THEN
             v_pos := POSITION(',' IN v_operand);
             v_temp := SUBSTRING(v_operand, 2, v_pos - 2);
-            v_addr := ('x' || v_temp)::bit(16)::int;
-            v_byte := v_addr & 255;
-        -- Absolute: $addr
-        ELSIF SUBSTRING(v_operand FROM 1 FOR 1) = '$' THEN
-            v_mode := 'absolute';
+            v_addr := ('x' || LPAD(v_temp, 4, '0'))::bit(16)::int;
+            IF LENGTH(v_temp) <= 2 THEN
+                v_mode := 'zero_page_x';
+                v_byte := v_addr & 255;
+            ELSE
+                v_mode := 'absolute_x';
+                v_byte := v_addr;
+            END IF;
+        -- Indexed Y: $addr,Y
+        ELSIF v_operand ~ '^\$[0-9A-Fa-f]+,[Yy]$' THEN
+            v_pos := POSITION(',' IN v_operand);
+            v_temp := SUBSTRING(v_operand, 2, v_pos - 2);
+            v_addr := ('x' || LPAD(v_temp, 4, '0'))::bit(16)::int;
+            IF LENGTH(v_temp) <= 2 THEN
+                v_mode := 'zero_page_y';
+                v_byte := v_addr & 255;
+            ELSE
+                v_mode := 'absolute_y';
+                v_byte := v_addr;
+            END IF;
+        -- Non-indexed memory operand: $addr
+        ELSIF v_operand ~ '^\$[0-9A-Fa-f]+$' THEN
             v_temp := SUBSTRING(v_operand FROM 2);
-            v_addr := ('x' || v_temp)::bit(16)::int;
-            v_byte := v_addr;
+            IF LENGTH(v_temp) <= 2 THEN
+                v_mode := 'zero_page';
+                v_addr := ('x' || LPAD(v_temp, 2, '0'))::bit(8)::int;
+                v_byte := v_addr;
+            ELSE
+                v_mode := 'absolute';
+                v_addr := ('x' || LPAD(v_temp, 4, '0'))::bit(16)::int;
+                v_byte := v_addr;
+            END IF;
         ELSE
             RAISE EXCEPTION 'Cannot parse operand: %', v_operand;
         END IF;
@@ -130,11 +147,11 @@ BEGIN
             v_hex := to_hex(v_byte);
             IF LENGTH(v_hex) = 1 THEN v_hex := '0' || v_hex; END IF;
             v_result := v_result || decode(v_hex, 'hex');
-        ELSIF v_mode IN ('zero_page', 'zero_page_x') THEN
+        ELSIF v_mode IN ('zero_page', 'zero_page_x', 'zero_page_y') THEN
             v_hex := to_hex(v_byte);
             IF LENGTH(v_hex) = 1 THEN v_hex := '0' || v_hex; END IF;
             v_result := v_result || decode(v_hex, 'hex');
-        ELSIF v_mode = 'absolute' THEN
+        ELSIF v_mode IN ('absolute', 'absolute_x', 'absolute_y') THEN
             v_hex := to_hex(v_byte & 255);
             IF LENGTH(v_hex) = 1 THEN v_hex := '0' || v_hex; END IF;
             v_result := v_result || decode(v_hex, 'hex');
