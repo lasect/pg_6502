@@ -54,6 +54,9 @@ BEGIN
         WHEN 'CPY' THEN PERFORM pg6502.op_cpy(v_mode);
         WHEN 'NOP' THEN PERFORM pg6502.op_nop();
         WHEN 'JMP' THEN PERFORM pg6502.op_jmp(v_mode);
+        WHEN 'JSR' THEN PERFORM pg6502.op_jsr();
+        WHEN 'RTS' THEN PERFORM pg6502.op_rts();
+        WHEN 'RTI' THEN PERFORM pg6502.op_rti();
         WHEN 'BCC' THEN PERFORM pg6502.op_bcc();
         WHEN 'BCS' THEN PERFORM pg6502.op_bcs();
         WHEN 'BEQ' THEN PERFORM pg6502.op_beq();

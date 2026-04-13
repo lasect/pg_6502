@@ -179,6 +179,11 @@ INSERT INTO pg6502.opcode_table VALUES
     (0x4C, 'JMP', 'absolute',    3),
     (0x6C, 'JMP', 'indirect',    3),
 
+-- Subroutines
+    (0x20, 'JSR', 'absolute',    3),
+    (0x60, 'RTS', 'implied',     1),
+    (0x40, 'RTI', 'implied',     1),
+
 -- Branches
     (0x90, 'BCC', 'relative',    2),
     (0xB0, 'BCS', 'relative',    2),
@@ -816,6 +821,47 @@ BEGIN
         WHEN 'indirect'  THEN v_addr := pg6502.addr_indirect();
     END CASE;
     UPDATE pg6502.cpu SET pc = v_addr;
+END;
+$$ LANGUAGE plpgsql;
+
+-- JSR: Jump to Subroutine - push return address (PC-1) onto stack
+CREATE OR REPLACE FUNCTION pg6502.op_jsr()
+RETURNS VOID AS $$
+DECLARE v_pc INT; v_lo INT; v_hi INT;
+BEGIN
+    SELECT pc INTO v_pc FROM pg6502.cpu;
+    v_pc := v_pc + 2; -- PC points past the instruction
+    v_lo := v_pc & 255;
+    v_hi := (v_pc >> 8) & 255;
+    PERFORM pg6502.stack_push(v_hi);
+    PERFORM pg6502.stack_push(v_lo);
+    UPDATE pg6502.cpu SET pc = pg6502.addr_absolute();
+END;
+$$ LANGUAGE plpgsql;
+
+-- RTS: Return from Subroutine - pop return address and jump
+CREATE OR REPLACE FUNCTION pg6502.op_rts()
+RETURNS VOID AS $$
+DECLARE v_lo INT; v_hi INT; v_addr INT;
+BEGIN
+    v_lo := pg6502.stack_pop();
+    v_hi := pg6502.stack_pop();
+    v_addr := (v_hi * 256) + v_lo + 1; -- +1 because PC was saved as (return_addr - 1)
+    UPDATE pg6502.cpu SET pc = v_addr;
+END;
+$$ LANGUAGE plpgsql;
+
+-- RTI: Return from Interrupt
+CREATE OR REPLACE FUNCTION pg6502.op_rti()
+RETURNS VOID AS $$
+DECLARE v_flags INT; v_lo INT; v_hi INT; v_pc INT;
+BEGIN
+    v_flags := pg6502.stack_pop();
+    v_lo := pg6502.stack_pop();
+    v_hi := pg6502.stack_pop();
+    PERFORM pg6502.byte_to_flags(v_flags);
+    v_pc := (v_hi * 256) + v_lo;
+    UPDATE pg6502.cpu SET pc = v_pc;
 END;
 $$ LANGUAGE plpgsql;
 
