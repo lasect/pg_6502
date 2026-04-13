@@ -304,7 +304,9 @@ DECLARE
     v_size INT;
 BEGIN
     CASE p_mode
-        WHEN 'zero_page' THEN v_addr := pg6502.addr_zero_page(); v_size := 2;
+        WHEN 'zero_page'   THEN v_addr := pg6502.addr_zero_page();   v_size := 2;
+        WHEN 'zero_page_y' THEN v_addr := pg6502.addr_zero_page_y(); v_size := 2;
+        WHEN 'zero_page_x' THEN v_addr := pg6502.addr_zero_page_x(); v_size := 2;
         WHEN 'absolute'  THEN v_addr := pg6502.addr_absolute();  v_size := 3;
         ELSE
             RAISE EXCEPTION 'invalid addressing mode: %', p_mode;
