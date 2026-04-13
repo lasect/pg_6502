@@ -1,6 +1,6 @@
 -- Run Klaus Dormann 6502 Functional Test
 -- Run with a high limit to let it complete
-SELECT pg6502.run(150000000) AS cycles;
+SELECT pg6502.run(150000000, 1000000) AS cycles;
 
 -- Report final state
 SELECT 

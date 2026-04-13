@@ -21,15 +21,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pg6502.run(p_max_cycles INT DEFAULT 100000)
+CREATE OR REPLACE FUNCTION pg6502.run(p_max_cycles INT DEFAULT 100000, p_log_interval INT DEFAULT 1000000)
 RETURNS INT AS $$
 DECLARE
     v_result TEXT;
     v_cycles INT := 0;
+    v_pc INT;
 BEGIN
     LOOP
         v_result := pg6502.execute_instruction();
         v_cycles := v_cycles + 1;
+
+        IF v_cycles % p_log_interval = 0 THEN
+            SELECT pc INTO v_pc FROM pg6502.cpu;
+            RAISE NOTICE 'Cycles: %, PC: %', v_cycles, v_pc;
+        END IF;
 
         EXIT WHEN v_result = 'BRK';
         EXIT WHEN v_cycles >= p_max_cycles;
